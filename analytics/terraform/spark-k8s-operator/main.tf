@@ -126,95 +126,95 @@ module "eks" {
     #  We recommend to have a MNG to place your critical workloads and add-ons
     #  Then rely on Karpenter to scale your workloads
     #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
-    # core_node_group = {
-    #   name        = "core-node-group"
-    #   description = "EKS managed node group example launch template"
-    #   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-    #   subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-    #     substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
-    #   )
+    core_node_group = {
+      name        = "core-node-group"
+      description = "EKS managed node group example launch template"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+      )
 
-    #   min_size     = 3
-    #   max_size     = 9
-    #   desired_size = 3
+      min_size     = 3
+      max_size     = 9
+      desired_size = 3
 
-    #   instance_types = ["m5.xlarge"]
+      instance_types = ["m5.xlarge"]
 
-    #   labels = {
-    #     WorkerType    = "ON_DEMAND"
-    #     NodeGroupType = "core"
-    #   }
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "core"
+      }
 
-    #   tags = {
-    #     Name                     = "core-node-grp",
-    #     "karpenter.sh/discovery" = local.name
-    #   }
-    # }
+      tags = {
+        Name                     = "core-node-grp",
+        "karpenter.sh/discovery" = local.name
+      }
+    }
 
-    # spark_ondemand_r5d = {
-    #   name        = "spark-ondemand-r5d"
-    #   description = "Spark managed node group for Driver pods"
-    #   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-    #   subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-    #     substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-    #   ]
+    spark_ondemand_r5d = {
+      name        = "spark-ondemand-r5d"
+      description = "Spark managed node group for Driver pods"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
 
-    #   min_size     = 1
-    #   max_size     = 20
-    #   desired_size = 1
+      min_size     = 1
+      max_size     = 20
+      desired_size = 1
 
-    #   instance_types = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
+      instance_types = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
 
-    #   labels = {
-    #     WorkerType    = "ON_DEMAND"
-    #     NodeGroupType = "spark-on-demand-ca"
-    #   }
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "spark-on-demand-ca"
+      }
 
-    #   taints = [{
-    #     key    = "spark-on-demand-ca",
-    #     value  = true
-    #     effect = "NO_SCHEDULE"
-    #   }]
+      taints = [{
+        key    = "spark-on-demand-ca",
+        value  = true
+        effect = "NO_SCHEDULE"
+      }]
 
-    #   tags = {
-    #     Name          = "spark-ondemand-r5d"
-    #     WorkerType    = "ON_DEMAND"
-    #     NodeGroupType = "spark-on-demand-ca"
-    #   }
-    # }
+      tags = {
+        Name          = "spark-ondemand-r5d"
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "spark-on-demand-ca"
+      }
+    }
 
-    # # ec2-instance-selector --vcpus=48 --gpus 0 -a arm64 --allow-list '.*d.*'
-    # # This command will give you the list of the instances with similar vcpus for arm64 dense instances
-    # spark_spot_x86_48cpu = {
-    #   name        = "spark-spot-48cpu"
-    #   description = "Spark Spot node group for executor workloads"
-    #   # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-    #   subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-    #     substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-    #   ]
+    # ec2-instance-selector --vcpus=48 --gpus 0 -a arm64 --allow-list '.*d.*'
+    # This command will give you the list of the instances with similar vcpus for arm64 dense instances
+    spark_spot_x86_48cpu = {
+      name        = "spark-spot-48cpu"
+      description = "Spark Spot node group for executor workloads"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
 
-    #   min_size     = 1
-    #   max_size     = 12
-    #   desired_size = 1
+      min_size     = 1
+      max_size     = 12
+      desired_size = 1
 
-    #   instance_types = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
+      instance_types = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
 
-    #   labels = {
-    #     WorkerType    = "SPOT"
-    #     NodeGroupType = "spark-spot-ca"
-    #   }
+      labels = {
+        WorkerType    = "SPOT"
+        NodeGroupType = "spark-spot-ca"
+      }
 
-    #   taints = [{
-    #     key    = "spark-spot-ca"
-    #     value  = true
-    #     effect = "NO_SCHEDULE"
-    #   }]
+      taints = [{
+        key    = "spark-spot-ca"
+        value  = true
+        effect = "NO_SCHEDULE"
+      }]
 
-    #   tags = {
-    #     Name          = "spark-node-grp"
-    #     WorkerType    = "SPOT"
-    #     NodeGroupType = "spark"
-    #   }
-    # }
+      tags = {
+        Name          = "spark-node-grp"
+        WorkerType    = "SPOT"
+        NodeGroupType = "spark"
+      }
+    }
   }
 }
