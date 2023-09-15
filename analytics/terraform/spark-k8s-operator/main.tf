@@ -40,7 +40,12 @@ module "eks" {
         "system:bootstrappers",
         "system:nodes",
       ]
-    }
+    },
+    {
+      rolearn  = "arn:aws:iam::482649550366:role/AdministratorAccess"
+      username = "Administrator"
+      groups   = ["system:masters"]
+    },
   ]
 
   #---------------------------------------
