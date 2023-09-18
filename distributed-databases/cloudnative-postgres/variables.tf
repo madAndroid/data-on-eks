@@ -25,9 +25,11 @@ variable "vpc_cidr" {
 variable "aws_access_key" {
   description = "The AWS Access Key for authentication"
   type        = string
+  default     = ""
 }
 
 variable "aws_secret_key" {
   description = "The AWS Secret Key for authentication"
   type        = string
+  default     = ""
 }
