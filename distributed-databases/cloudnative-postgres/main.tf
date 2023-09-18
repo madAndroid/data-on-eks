@@ -152,9 +152,9 @@ locals {
     mapAccounts = yamlencode({})
   }
 
-  eks_managed_node_groups = {}
+  disabled_eks_managed_node_groups = {}
 
-  disabled_eks_managed_node_groups = {
+  eks_managed_node_groups = {
 
     doeks_node_group = {
       name        = "doeks-node-group"
