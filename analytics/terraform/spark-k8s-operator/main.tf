@@ -245,6 +245,6 @@ module "eks_managed_node_groups" {
   taints = contains(keys(each.value), "taints") ? each.value.taints : []
   tags   = contains(keys(each.value), "tags") ? each.value.tags : {}
 
-  depends_on = [ module.eks ]
+  # depends_on = [ module.eks ]
 
 }
