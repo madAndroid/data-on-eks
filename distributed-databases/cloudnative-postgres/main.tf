@@ -12,7 +12,7 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 
   manage_aws_auth_configmap = true
-  create_aws_auth_configmap = true
+  # create_aws_auth_configmap = false
 
   aws_auth_roles = [
     {
@@ -122,6 +122,36 @@ module "eks" {
 }
 
 locals {
+
+  node_iam_role_arns = concat([for group in module.eks_managed_node_groups : group.iam_role_arn])
+
+  aws_auth_roles = [
+    {
+      rolearn  = "arn:aws:iam::482649550366:role/AdministratorAccess"
+      username = "Administrator"
+      groups   = ["system:masters"]
+    },
+  ]
+
+  aws_auth_configmap_data = {
+    mapRoles = yamlencode(concat(
+      [for role_arn in local.node_iam_role_arns : {
+        rolearn  = role_arn
+        username = "system:node:{{EC2PrivateDNSName}}"
+        groups = [
+          "system:bootstrappers",
+          "system:nodes",
+        ]
+        }
+      ],
+      local.aws_auth_roles
+    ))
+    # mapUsers    = yamlencode(var.aws_auth_users)
+    # mapAccounts = yamlencode(var.aws_auth_accounts)
+    mapUsers    = yamlencode({})
+    mapAccounts = yamlencode({})
+  }
+
   eks_managed_node_groups = {}
 
   disabled_eks_managed_node_groups = {
