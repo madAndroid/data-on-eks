@@ -16,8 +16,9 @@ spec:
     name: data-on-eks
     namespace: flux-system
   storeReadablePlan: human
-  targets: 
+  targets:
   - module.eks
+  - module.eks_managed_node_groups
   dependsOn:
   - name: vpc
   vars:
