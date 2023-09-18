@@ -217,7 +217,7 @@ module "eks" {
 
 }
 
-module "eks_managed_nodes_groups" {
+module "eks_managed_node_groups" {
 
   source = "terraform-aws-modules/eks/aws//modules/eks-managed-node-group"
   version = "~> 19"
@@ -240,13 +240,10 @@ module "eks_managed_nodes_groups" {
   desired_size = each.value.desired_size
 
   instance_types = each.value.instance_types
-  capacity_type  = each.value.capacity_type
 
-  labels = each.value.labels
-
-  taints = each.value.taints
-
-  tags = each.value.tags
+  labels = contains(keys(each.value), "labels") ? each.value.labels : {}
+  taints = contains(keys(each.value), "taints") ? each.value.taints : []
+  tags   = contains(keys(each.value), "tags") ? each.value.tags : {}
 
   depends_on = [ module.eks ]
 
