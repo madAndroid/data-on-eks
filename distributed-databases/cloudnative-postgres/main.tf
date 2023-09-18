@@ -12,6 +12,15 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 
   manage_aws_auth_configmap = true
+  create_aws_auth_configmap = true
+
+  aws_auth_roles = [
+    {
+      rolearn  = "arn:aws:iam::482649550366:role/AdministratorAccess"
+      username = "Administrator"
+      groups   = ["system:masters"]
+    },
+  ]
 
   #---------------------------------------
   # Note: This can further restricted to specific required for each Add-on and your application
