@@ -10,6 +10,99 @@ locals {
     Blueprint  = local.name
     GithubRepo = "github.com/awslabs/data-on-eks"
   }
+
+  eks_managed_node_groups = {
+    core_node_group = {
+      name        = "core-node-group"
+      description = "EKS managed node group example launch template"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
+      )
+
+      min_size     = 3
+      max_size     = 9
+      desired_size = 3
+
+      instance_types = ["m5.xlarge"]
+
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "core"
+      }
+
+      tags = {
+        Name                     = "core-node-grp",
+        "karpenter.sh/discovery" = local.name
+      }
+    }
+
+    spark_ondemand_r5d = {
+      name        = "spark-ondemand-r5d"
+      description = "Spark managed node group for Driver pods"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
+
+      min_size     = 1
+      max_size     = 20
+      desired_size = 1
+
+      instance_types = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
+
+      labels = {
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "spark-on-demand-ca"
+      }
+
+      taints = [{
+        key    = "spark-on-demand-ca",
+        value  = true
+        effect = "NO_SCHEDULE"
+      }]
+
+      tags = {
+        Name          = "spark-ondemand-r5d"
+        WorkerType    = "ON_DEMAND"
+        NodeGroupType = "spark-on-demand-ca"
+      }
+    }
+
+    # ec2-instance-selector --vcpus=48 --gpus 0 -a arm64 --allow-list '.*d.*'
+    # This command will give you the list of the instances with similar vcpus for arm64 dense instances
+    spark_spot_x86_48cpu = {
+      name        = "spark-spot-48cpu"
+      description = "Spark Spot node group for executor workloads"
+      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
+      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
+        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
+      ]
+
+      min_size     = 1
+      max_size     = 12
+      desired_size = 1
+
+      instance_types = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
+
+      labels = {
+        WorkerType    = "SPOT"
+        NodeGroupType = "spark-spot-ca"
+      }
+
+      taints = [{
+        key    = "spark-spot-ca"
+        value  = true
+        effect = "NO_SCHEDULE"
+      }]
+
+      tags = {
+        Name          = "spark-node-grp"
+        WorkerType    = "SPOT"
+        NodeGroupType = "spark"
+      }
+    }
+  }
 }
 
 #---------------------------------------------------------------
@@ -17,7 +110,7 @@ locals {
 #---------------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.15"
+  version = "~> 19"
 
   cluster_name    = local.name
   cluster_version = var.eks_cluster_version
@@ -122,99 +215,39 @@ module "eks" {
     }
   }
 
-  eks_managed_node_groups = {
-    #  We recommend to have a MNG to place your critical workloads and add-ons
-    #  Then rely on Karpenter to scale your workloads
-    #  You can also make uses on nodeSelector and Taints/tolerations to spread workloads on MNG or Karpenter provisioners
-    core_node_group = {
-      name        = "core-node-group"
-      description = "EKS managed node group example launch template"
-      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]
-      )
+}
 
-      min_size     = 3
-      max_size     = 9
-      desired_size = 3
+module "eks_managed_nodes_groups" {
 
-      instance_types = ["m5.xlarge"]
+  source = "terraform-aws-modules/eks/aws//modules/eks-managed-node-group"
+  version = "~> 19"
 
-      labels = {
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "core"
-      }
+  for_each = local.eks_managed_node_groups
 
-      tags = {
-        Name                     = "core-node-grp",
-        "karpenter.sh/discovery" = local.name
-      }
-    }
+  name            = each.value.name
+  cluster_name    = module.eks.cluster_name
+  cluster_version = module.eks.cluster_version
 
-    spark_ondemand_r5d = {
-      name        = "spark-ondemand-r5d"
-      description = "Spark managed node group for Driver pods"
-      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-      ]
+  subnet_ids      = each.value.subnet_ids
 
-      min_size     = 1
-      max_size     = 20
-      desired_size = 1
+  // The following variables are necessary if you decide to use the module outside of the parent EKS module context.
+  // Without it, the security groups of the nodes are empty and thus won't join the cluster.
+  cluster_primary_security_group_id = module.eks.cluster_primary_security_group_id
+  vpc_security_group_ids            = [module.eks.node_security_group_id]
 
-      instance_types = ["r5d.xlarge"] # r5d.xlarge 4vCPU - 32GB - 1 x 150 NVMe SSD - Up to 10Gbps - Up to 4,750 Mbps EBS Bandwidth
+  min_size     = each.value.min_size
+  max_size     = each.value.max_size
+  desired_size = each.value.desired_size
 
-      labels = {
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "spark-on-demand-ca"
-      }
+  instance_types = each.value.instance_types
+  capacity_type  = each.value.capacity_type
 
-      taints = [{
-        key    = "spark-on-demand-ca",
-        value  = true
-        effect = "NO_SCHEDULE"
-      }]
+  labels = each.value.labels
 
-      tags = {
-        Name          = "spark-ondemand-r5d"
-        WorkerType    = "ON_DEMAND"
-        NodeGroupType = "spark-on-demand-ca"
-      }
-    }
+  taints = each.value.taints
 
-    # ec2-instance-selector --vcpus=48 --gpus 0 -a arm64 --allow-list '.*d.*'
-    # This command will give you the list of the instances with similar vcpus for arm64 dense instances
-    spark_spot_x86_48cpu = {
-      name        = "spark-spot-48cpu"
-      description = "Spark Spot node group for executor workloads"
-      # Filtering only Secondary CIDR private subnets starting with "100.". Subnet IDs where the nodes/node groups will be provisioned
-      subnet_ids = [element(compact([for subnet_id, cidr_block in zipmap(module.vpc.private_subnets, module.vpc.private_subnets_cidr_blocks) :
-        substr(cidr_block, 0, 4) == "100." ? subnet_id : null]), 0)
-      ]
+  tags = each.value.tags
 
-      min_size     = 1
-      max_size     = 12
-      desired_size = 1
+  depends_on = [ module.eks ]
 
-      instance_types = ["r5d.12xlarge", "r6id.12xlarge", "c5ad.12xlarge", "c5d.12xlarge", "c6id.12xlarge", "m5ad.12xlarge", "m5d.12xlarge", "m6id.12xlarge"] # 48cpu - 2 x 1425 NVMe SSD
-
-      labels = {
-        WorkerType    = "SPOT"
-        NodeGroupType = "spark-spot-ca"
-      }
-
-      taints = [{
-        key    = "spark-spot-ca"
-        value  = true
-        effect = "NO_SCHEDULE"
-      }]
-
-      tags = {
-        Name          = "spark-node-grp"
-        WorkerType    = "SPOT"
-        NodeGroupType = "spark"
-      }
-    }
-  }
 }
