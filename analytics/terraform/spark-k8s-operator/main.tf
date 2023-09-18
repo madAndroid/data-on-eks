@@ -300,6 +300,8 @@ resource "kubernetes_config_map" "aws_auth" {
     # This is only intended to be used in scenarios where the configmap does not exist
     ignore_changes = [data, metadata[0].labels, metadata[0].annotations]
   }
+
+  depends_on = [ module.eks_managed_node_groups.iam_role ]
 }
 
 resource "kubernetes_config_map_v1_data" "aws_auth" {
