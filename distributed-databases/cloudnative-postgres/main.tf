@@ -158,6 +158,10 @@ module "eks_managed_node_groups" {
   cluster_name    = module.eks.cluster_name
   cluster_version = module.eks.cluster_version
 
+  ami_id          = each.value.ami_id
+
+  enable_bootstrap_user_data = true
+
   subnet_ids      = each.value.subnet_ids
 
   // The following variables are necessary if you decide to use the module outside of the parent EKS module context.
