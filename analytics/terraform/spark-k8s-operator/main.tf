@@ -104,6 +104,8 @@ locals {
     }
   }
 
+  node_iam_role_arns = concat([for group in module.eks_managed_node_groups : group.iam_role_arn])
+
   aws_auth_roles = [
     # We need to add in the Karpenter node IAM role for nodes launched by Karpenter
     {
@@ -123,7 +125,7 @@ locals {
 
   aws_auth_configmap_data = {
     mapRoles = yamlencode(concat(
-      [for role_arn in module.eks_managed_node_groups[*].iam_role_arn : {
+      [for role_arn in local.node_iam_role_arns : {
         rolearn  = role_arn
         username = "system:node:{{EC2PrivateDNSName}}"
         groups = [
