@@ -16,8 +16,11 @@ spec:
     name: data-on-eks
     namespace: flux-system
   storeReadablePlan: human
-  targets: 
+  targets:
   - module.eks
+  - module.eks_managed_node_groups
+  - kubernetes_config_map.aws_auth
+  - kubernetes_config_map_v1_data.aws_auth
   dependsOn:
   - name: vpc
   vars:
