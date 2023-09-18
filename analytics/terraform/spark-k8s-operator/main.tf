@@ -284,6 +284,8 @@ module "eks_managed_node_groups" {
   taints = contains(keys(each.value), "taints") ? each.value.taints : []
   tags   = contains(keys(each.value), "tags") ? each.value.tags : {}
 
+  # depends_on = [ kubernetes_config_map.aws_auth, kubernetes_config_map_v1_data.aws_auth ]
+
 }
 
 resource "kubernetes_config_map" "aws_auth" {
